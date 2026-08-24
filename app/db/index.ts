@@ -5,12 +5,15 @@ import type {
   Teacher,
   TeacherHours,
   PrimaryKeyName,
+  DayConfig,
 } from "../types"
 import { addFieldCheckConstraint, setupRelationConstraints } from "./hooks"
+import { DAYS_COUNT } from "~/constants"
 
 const db = new Dexie("school") as Dexie & {
   rooms: EntityTable<Room, PrimaryKeyName>
   groups: EntityTable<SchoolGroup, PrimaryKeyName>
+  dayConfigs: EntityTable<DayConfig, PrimaryKeyName>
   teachers: EntityTable<Teacher, PrimaryKeyName>
   hours: EntityTable<TeacherHours, PrimaryKeyName>
 }
@@ -18,6 +21,8 @@ const db = new Dexie("school") as Dexie & {
 db.version(1).stores({
   rooms: "++id, &name, capacity",
   groups: "++id, &[grade+letter], grade, letter, roomId",
+  dayConfigs:
+    "++id, &[groupId+dayId], groupId, dayId, firstLesson, minLessons, maxLessons, roomId",
   teachers: "++id, &name, roomId, &groupId",
   hours: "++id, &[teacherId+groupId], teacherId, groupId, hours",
 })
@@ -46,8 +51,36 @@ addFieldCheckConstraint(
 addFieldCheckConstraint(
   db.groups,
   "letter",
-  (value) => value.trim().length === 0,
+  (value) => value.trim().length === 1,
   "У класса может быть только одна буква"
+)
+
+addFieldCheckConstraint(
+  db.dayConfigs,
+  "dayId",
+  (value) => value >= 0 && value < DAYS_COUNT,
+  "Такого дня не существует"
+)
+
+addFieldCheckConstraint(
+  db.dayConfigs,
+  "firstLesson",
+  (value) => value > 0,
+  "Первый урок должен быть положительным числом"
+)
+
+addFieldCheckConstraint(
+  db.dayConfigs,
+  "minLessons",
+  (value) => value > 0,
+  "Минимальное кол-во уроков должны быть положительным числом"
+)
+
+addFieldCheckConstraint(
+  db.dayConfigs,
+  "maxLessons",
+  (value) => value > 0,
+  "Максимальное кол-во уроков должны быть положительным числом"
 )
 
 addFieldCheckConstraint(
@@ -60,7 +93,7 @@ addFieldCheckConstraint(
 addFieldCheckConstraint(
   db.hours,
   "hours",
-  (value) => value >= 0,
+  (value) => value > 0,
   "Часы должны быть положительными"
 )
 
@@ -75,6 +108,10 @@ setupRelationConstraints(db, {
         table: "teachers",
         field: "roomId",
       },
+      {
+        table: "dayConfigs",
+        field: "roomId"
+      }
     ],
   },
   groups: {
@@ -89,6 +126,10 @@ setupRelationConstraints(db, {
         table: "hours",
         field: "groupId",
       },
+      {
+        table: "dayConfigs",
+        field: "groupId"
+      }
     ],
   },
   teachers: {

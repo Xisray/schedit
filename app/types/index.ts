@@ -21,6 +21,15 @@ export interface SchoolGroup extends Entity {
   roomId: Id | null
 }
 
+export interface DayConfig extends Entity {
+  groupId: Id
+  dayId: number
+  firstLesson: number
+  minLessons: number
+  maxLessons: number
+  roomId: Id | null
+}
+
 export interface Teacher extends Entity {
   name: string
   roomId: Id | null
@@ -35,4 +44,5 @@ export interface TeacherHours extends Entity {
 
 export type CreateEntity<TEntity> = Omit<TEntity, PrimaryKeyName>
 export type PatchEntity<TEntity> = Partial<CreateEntity<TEntity>>
+export type CreateDayConfig = Omit<CreateEntity<DayConfig>, "groupId">
 export type CreateTeacherHours = Omit<CreateEntity<TeacherHours>, "teacherId">

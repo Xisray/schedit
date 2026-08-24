@@ -1,10 +1,13 @@
 import type { EntityTable, IDType, InsertType, UpdateSpec } from "dexie"
 import { db } from "~/db"
 import type {
+  CreateDayConfig,
   CreateEntity,
   CreateTeacherHours,
+  DayConfig,
   PatchEntity,
   PrimaryKeyName,
+  SchoolGroup,
   Teacher,
   TeacherHours,
 } from "~/types"
@@ -22,6 +25,18 @@ type Service<TEntity, TKey extends keyof TEntity> = ServiceBase<
   patch: (
     id: IDType<TEntity, TKey>,
     entity: UpdateSpec<InsertType<TEntity, TKey>>
+  ) => Promise<void>
+}
+
+type GroupService = ServiceBase<SchoolGroup, PrimaryKeyName> & {
+  add: (
+    group: CreateEntity<SchoolGroup>,
+    dayConfigs?: CreateDayConfig[]
+  ) => Promise<void>
+  patch: (
+    id: IDType<SchoolGroup, PrimaryKeyName>,
+    group: PatchEntity<SchoolGroup>,
+    dayConfigs?: CreateDayConfig[]
   ) => Promise<void>
 }
 
@@ -57,7 +72,46 @@ function createService<TEntity, TKey extends keyof TEntity>(
 }
 
 export const roomService = createService(db.rooms)
-export const groupService = createService(db.groups)
+export const groupService: GroupService = {
+  async add(group, dayConfigs = []) {
+    await db.transaction("rw", [db.groups, db.dayConfigs], async () => {
+      const groupId = await db.groups.add(group)
+
+      if (dayConfigs.length > 0) {
+        const dayConfigsWithForeignId = dayConfigs.map((h) => ({
+          ...h,
+          groupId: groupId,
+        }))
+        await db.dayConfigs.bulkAdd(dayConfigsWithForeignId)
+      }
+    })
+  },
+  async patch(id, group, dayConfigs) {
+    await db.transaction("rw", [db.groups, db.dayConfigs], async () => {
+      if (Object.keys(group).length > 0) {
+        await db.groups.update(id, group)
+      }
+
+      if (dayConfigs) {
+        await db.dayConfigs.where({ groupId: id }).delete()
+
+        if (dayConfigs.length > 0) {
+          const preparedDayConfigs = dayConfigs.map((h) => ({
+            ...h,
+            groupId: id,
+          }))
+          await db.dayConfigs.bulkAdd(preparedDayConfigs)
+        }
+      }
+    })
+  },
+  async remove(id) {
+    await db.groups.delete(id)
+  },
+  async clear() {
+    await db.groups.clear()
+  },
+}
 export const teacherService: TeacherService = {
   async add(teacher, hours = []) {
     await db.transaction("rw", [db.teachers, db.hours], async () => {
@@ -86,7 +140,7 @@ export const teacherService: TeacherService = {
             ...h,
             teacherId: id,
           }))
-          await db.hours.bulkAdd(preparedHours as TeacherHours[])
+          await db.hours.bulkAdd(preparedHours)
         }
       }
     })

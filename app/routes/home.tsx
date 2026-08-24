@@ -1,3 +1,9 @@
+import { RoomForm } from "~/components/forms/RoomForm"
+
 export default function Home() {
-  return <div className="flex min-h-svh p-6"></div>
+  return (
+    <div className="">
+      <RoomForm />
+    </div>
+  )
 }

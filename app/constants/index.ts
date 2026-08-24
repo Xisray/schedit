@@ -43,3 +43,15 @@ export const DEFAULT_SCHEDULE_CONFIG: Record<number, CreateDayConfig[]> = {
   10: createDayConfigs(6, 1, 6, 7),
   11: createDayConfigs(6, 1, 6, 7),
 } as const
+
+export const ERROR_MESSAGES: Record<string, string> = {
+  ConstraintError: "Запись с такими уникальными данными уже существует.",
+  QuotaExceededError: "Превышен лимит памяти хранилища браузера.",
+  NotFoundError: "Запрашиваемая запись не найдена.",
+  DatabaseClosedError:
+    "База данных была закрыта. Попробуйте перезагрузить страницу.",
+  VersionError: "Ошибка версии базы данных. Попробуйте очистить кэш браузера.",
+  AbortError: "Операция была отменена.",
+  TimeoutError: "Время ожидания операции истекло.",
+  UnknownError: "Произошла неизвестная ошибка базы данных.",
+} as const

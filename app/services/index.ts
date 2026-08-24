@@ -26,6 +26,8 @@ type Service<TEntity, TKey extends keyof TEntity> = ServiceBase<
     id: IDType<TEntity, TKey>,
     entity: UpdateSpec<InsertType<TEntity, TKey>>
   ) => Promise<void>
+  bulkAdd: (entites: InsertType<TEntity, TKey>[]) => Promise<void>
+  get: (id: IDType<TEntity, TKey>) => Promise<TEntity | null>
 }
 
 type GroupService = ServiceBase<SchoolGroup, PrimaryKeyName> & {
@@ -67,6 +69,12 @@ function createService<TEntity, TKey extends keyof TEntity>(
     },
     async clear() {
       await table.clear()
+    },
+    async bulkAdd(entites) {
+      await table.bulkAdd(entites)
+    },
+    async get(id) {
+      return (await table.get(id)) ?? null
     },
   }
 }

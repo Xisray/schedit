@@ -1,8 +1,10 @@
+import type { InsertType, UpdateSpec } from "dexie"
+
 export type Id = number & {
   readonly __brand: "Id"
 }
 
-interface Entity {
+export interface Entity {
   id: Id
 }
 
@@ -30,3 +32,7 @@ export interface TeacherHours extends Entity {
   groupId: Id
   hours: number
 }
+
+export type CreateEntity<TEntity> = Omit<TEntity, PrimaryKeyName>
+export type PatchEntity<TEntity> = Partial<CreateEntity<TEntity>>
+export type CreateTeacherHours = Omit<CreateEntity<TeacherHours>, "teacherId">

@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "./ui/table"
 import ComboboxField from "./fields/combobox-field"
-import { useField } from "~/hooks/useField"
+import { useErrorField } from "~/hooks/useErrorField"
 import InputField from "./fields/input-field"
 import { Button } from "./ui/button"
 import { Plus, Trash2 } from "lucide-react"
@@ -31,8 +31,8 @@ export default function TeacherHoursField({
   error,
 }: Props) {
   const array = useKeyedArray(value, onChange)
-  const group = useField<SchoolGroup | null>(null)
-  const hours = useField<number | null>(null)
+  const group = useErrorField<SchoolGroup | null>(null)
+  const hours = useErrorField<number | null>(null)
 
   const handleAdd = () => {
     if (!group.value) {

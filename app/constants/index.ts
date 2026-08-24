@@ -55,3 +55,8 @@ export const ERROR_MESSAGES: Record<string, string> = {
   TimeoutError: "Время ожидания операции истекло.",
   UnknownError: "Произошла неизвестная ошибка базы данных.",
 } as const
+
+export const CYRILLIC_ALPHABET = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
+export const CYRILLIC_LETTER = /^[А-ЯЁ]$/
+export const MIN_GRADE = 1
+export const MAX_GRADE = 11

@@ -27,7 +27,8 @@ type Service<TEntity, TKey extends keyof TEntity> = ServiceBase<
     entity: UpdateSpec<InsertType<TEntity, TKey>>
   ) => Promise<void>
   bulkAdd: (entites: InsertType<TEntity, TKey>[]) => Promise<void>
-  get: (id: IDType<TEntity, TKey>) => Promise<TEntity | null>
+  get: (id: IDType<TEntity, TKey>) => Promise<TEntity | undefined>
+  getAll: () => Promise<TEntity[]>
 }
 
 type GroupService = ServiceBase<SchoolGroup, PrimaryKeyName> & {
@@ -38,6 +39,13 @@ type GroupService = ServiceBase<SchoolGroup, PrimaryKeyName> & {
   patch: (
     id: IDType<SchoolGroup, PrimaryKeyName>,
     group: PatchEntity<SchoolGroup>,
+    dayConfigs?: CreateDayConfig[]
+  ) => Promise<void>
+  get: (
+    id: IDType<SchoolGroup, PrimaryKeyName>
+  ) => Promise<(SchoolGroup & { dayConfigs: DayConfig[] }) | undefined>
+  bulkAdd: (
+    entities: CreateEntity<SchoolGroup>[],
     dayConfigs?: CreateDayConfig[]
   ) => Promise<void>
 }
@@ -74,7 +82,10 @@ function createService<TEntity, TKey extends keyof TEntity>(
       await table.bulkAdd(entites)
     },
     async get(id) {
-      return (await table.get(id)) ?? null
+      return await table.get(id)
+    },
+    async getAll() {
+      return await table.toArray()
     },
   }
 }
@@ -118,6 +129,33 @@ export const groupService: GroupService = {
   },
   async clear() {
     await db.groups.clear()
+  },
+  async get(id) {
+    const result = await db.groups.get(id)
+    if (!result) return undefined
+
+    const dayConfigs = await db.dayConfigs.where({ groupId: id }).toArray()
+
+    return {
+      ...result,
+      dayConfigs,
+    }
+  },
+  async bulkAdd(entities, dayConfigs = []) {
+    await db.transaction("rw", [db.groups, db.dayConfigs], async () => {
+      const groupIds = await db.groups.bulkAdd(entities, { allKeys: true })
+
+      if (dayConfigs.length > 0) {
+        const allDayConfigs = groupIds.flatMap((groupId) =>
+          dayConfigs.map((dc) => ({
+            ...dc,
+            groupId,
+          }))
+        )
+
+        await db.dayConfigs.bulkAdd(allDayConfigs)
+      }
+    })
   },
 }
 export const teacherService: TeacherService = {

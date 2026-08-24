@@ -3,7 +3,7 @@ import { useState, type SubmitEvent } from "react"
 import type { Id } from "~/types"
 import { Field, FieldGroup } from "../ui/field"
 import { cn, resolveError } from "~/lib/utils"
-import { useField } from "~/hooks/useField"
+import { useErrorField } from "~/hooks/useErrorField"
 import InputField from "../fields/input-field"
 import { Button } from "../ui/button"
 import { Edit2, Plus } from "lucide-react"
@@ -50,18 +50,18 @@ function parseRoomRanges(rooms: string): string[] {
 }
 
 type Props = {
-  roomId?: Id | null
+  roomId?: Id
 }
 
-export function RoomForm({ roomId = null }: Props) {
+export function RoomForm({ roomId }: Props) {
   const selectedRoom = useLiveQuery(
-    async () => (roomId ? ((await roomService.get(roomId)) ?? null) : null),
+    async () => (roomId && await roomService.get(roomId)),
     [roomId]
   )
 
   const isCreating = !selectedRoom
 
-  const room = useField(selectedRoom?.name ?? "")
+  const room = useErrorField(selectedRoom?.name ?? "")
   const [capacity, setCapacity] = useState(selectedRoom?.capacity ?? 1)
 
   const handleSubmit = async (e: SubmitEvent) => {

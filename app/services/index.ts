@@ -26,6 +26,9 @@ type Service<TEntity, TKey extends keyof TEntity> = ServiceBase<
     id: IDType<TEntity, TKey>,
     entity: UpdateSpec<InsertType<TEntity, TKey>>
   ) => Promise<void>
+  bulkAdd: (entites: InsertType<TEntity, TKey>[]) => Promise<void>
+  get: (id: IDType<TEntity, TKey>) => Promise<TEntity | undefined>
+  getAll: () => Promise<TEntity[]>
 }
 
 type GroupService = ServiceBase<SchoolGroup, PrimaryKeyName> & {
@@ -38,6 +41,14 @@ type GroupService = ServiceBase<SchoolGroup, PrimaryKeyName> & {
     group: PatchEntity<SchoolGroup>,
     dayConfigs?: CreateDayConfig[]
   ) => Promise<void>
+  get: (
+    id: IDType<SchoolGroup, PrimaryKeyName>
+  ) => Promise<(SchoolGroup & { dayConfigs: DayConfig[] }) | undefined>
+  bulkAdd: (
+    entities: CreateEntity<SchoolGroup>[],
+    dayConfigs?: CreateDayConfig[]
+  ) => Promise<void>
+  getAll: () => Promise<SchoolGroup[]>
 }
 
 type TeacherService = ServiceBase<Teacher, PrimaryKeyName> & {
@@ -50,6 +61,9 @@ type TeacherService = ServiceBase<Teacher, PrimaryKeyName> & {
     teacher: PatchEntity<Teacher>,
     hours?: CreateTeacherHours[]
   ) => Promise<void>
+  get: (
+    id: IDType<Teacher, PrimaryKeyName>
+  ) => Promise<(Teacher & { hours: CreateTeacherHours[] }) | undefined>
 }
 
 function createService<TEntity, TKey extends keyof TEntity>(
@@ -67,6 +81,15 @@ function createService<TEntity, TKey extends keyof TEntity>(
     },
     async clear() {
       await table.clear()
+    },
+    async bulkAdd(entites) {
+      await table.bulkAdd(entites)
+    },
+    async get(id) {
+      return await table.get(id)
+    },
+    async getAll() {
+      return await table.toArray()
     },
   }
 }
@@ -111,6 +134,36 @@ export const groupService: GroupService = {
   async clear() {
     await db.groups.clear()
   },
+  async get(id) {
+    const result = await db.groups.get(id)
+    if (!result) return undefined
+
+    const dayConfigs = await db.dayConfigs.where({ groupId: id }).toArray()
+
+    return {
+      ...result,
+      dayConfigs,
+    }
+  },
+  async bulkAdd(entities, dayConfigs = []) {
+    await db.transaction("rw", [db.groups, db.dayConfigs], async () => {
+      const groupIds = await db.groups.bulkAdd(entities, { allKeys: true })
+
+      if (dayConfigs.length > 0) {
+        const allDayConfigs = groupIds.flatMap((groupId) =>
+          dayConfigs.map((dc) => ({
+            ...dc,
+            groupId,
+          }))
+        )
+
+        await db.dayConfigs.bulkAdd(allDayConfigs)
+      }
+    })
+  },
+  async getAll() {
+    return await db.groups.toArray()
+  },
 }
 export const teacherService: TeacherService = {
   async add(teacher, hours = []) {
@@ -150,5 +203,16 @@ export const teacherService: TeacherService = {
   },
   async clear() {
     await db.teachers.clear()
+  },
+  async get(id) {
+    const result = await db.teachers.get(id)
+    if (!result) return undefined
+
+    const hours = await db.hours.where({ teacherId: id }).toArray()
+
+    return {
+      ...result,
+      hours,
+    }
   },
 }

@@ -16,6 +16,7 @@ export default function ToggleField({
   orientation,
   labelPosition,
   value,
+  onChange,
   component: Component,
   ...props
 }: ToggleFieldBaseProps) {
@@ -28,7 +29,7 @@ export default function ToggleField({
       orientation={orientation}
       labelPosition={labelPosition}
     >
-      <Component id={id} checked={value} {...props} />
+      <Component id={id} checked={value} {...props} onCheckedChange={onChange} />
     </FieldBase>
   )
 }

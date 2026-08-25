@@ -18,7 +18,6 @@ export interface Room extends Entity {
 export interface SchoolGroup extends Entity {
   grade: number
   letter: string
-  roomId: Id | null
 }
 
 export interface DayConfig extends Entity {

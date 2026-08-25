@@ -1,5 +1,5 @@
 import React from "react"
-import type { ErrorField } from "~/hooks/useField"
+import type { ErrorField } from "~/hooks/useErrorField"
 import { FieldError as ShadcnFieldError } from "../ui/field"
 
 type Props = {

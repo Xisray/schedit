@@ -20,7 +20,7 @@ const db = new Dexie("school") as Dexie & {
 
 db.version(1).stores({
   rooms: "++id, &name, capacity",
-  groups: "++id, &[grade+letter], grade, letter, roomId",
+  groups: "++id, &[grade+letter], grade, letter",
   dayConfigs:
     "++id, &[groupId+dayId], groupId, dayId, firstLesson, minLessons, maxLessons, roomId",
   teachers: "++id, &name, roomId, &groupId",
@@ -101,17 +101,13 @@ setupRelationConstraints(db, {
   rooms: {
     setNull: [
       {
-        table: "groups",
-        field: "roomId",
-      },
-      {
         table: "teachers",
         field: "roomId",
       },
       {
         table: "dayConfigs",
-        field: "roomId"
-      }
+        field: "roomId",
+      },
     ],
   },
   groups: {
@@ -128,8 +124,8 @@ setupRelationConstraints(db, {
       },
       {
         table: "dayConfigs",
-        field: "groupId"
-      }
+        field: "groupId",
+      },
     ],
   },
   teachers: {

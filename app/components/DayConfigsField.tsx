@@ -5,30 +5,35 @@ import { DAYS_NAMES } from "~/constants"
 import SwitchField from "./fields/switch-field"
 import InputField from "./fields/input-field"
 import ComboboxField from "./fields/combobox-field"
-import { createDayConfig, setArrayItemField } from "~/lib/utils"
+import { createDayConfig } from "~/lib/utils"
 import type { SetStateAction } from "react"
+import { useLiveQuery } from "dexie-react-hooks"
+import { roomService } from "~/services"
 
 export default function DayConfigsField({
   value,
   onChange,
-  rooms,
   disabled,
   required,
 }: Omit<ValuableProps<CreateDayConfig[]>, "onBlur" | "onFocus"> & {
-  rooms: Room[]
   onChange: (value: SetStateAction<CreateDayConfig[]>) => void
 }) {
+  const rooms = useLiveQuery(() => roomService.getAll(), [], [] as Room[])
   const handleToggleDay = (dayIndex: number, enabled: boolean) => {
     if (enabled)
       onChange((prev) => [...prev, createDayConfig(dayIndex, 1, 5, 6)])
-    else onChange((prev) => prev.filter((_, index) => index !== dayIndex))
+    else onChange((prev) => prev.filter((day, index) => day.dayId !== dayIndex))
   }
   const handleScheduleChange = <K extends keyof CreateDayConfig>(
     dayIndex: number,
     field: K,
     val: CreateDayConfig[K]
   ) => {
-    onChange((prev) => setArrayItemField(prev, dayIndex, field, val))
+    onChange((prev) =>
+      prev.map((day, _) =>
+        day.dayId === dayIndex ? { ...day, [field]: val } : day
+      )
+    )
   }
 
   return (
@@ -40,11 +45,11 @@ export default function DayConfigsField({
         Расписание на неделю (6 дней)
       </FieldLegend>
 
-      <FieldGroup className="no-scrollbar max-h-[50vh] overflow-x-hidden overflow-y-auto">
+      <FieldGroup className="no-scrollbar max-h-[50vh] overflow-x-hidden overflow-y-auto px-2">
         {DAYS_NAMES.map((day, dayIndex) => {
           const dayConfig = value.find((dc) => dc.dayId === dayIndex)
           return (
-            <FieldGroup>
+            <FieldGroup key={dayIndex}>
               <SwitchField
                 value={!!dayConfig}
                 onChange={(v) => handleToggleDay(dayIndex, v)}

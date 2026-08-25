@@ -1,5 +1,5 @@
 import type { CreateTeacherHours, SchoolGroup } from "~/types"
-import type { ErrorField, ValuableProps } from "./xui"
+import type { ValuableProps } from "./xui"
 import { FieldLegend, FieldSet } from "./ui/field"
 import {
   Table,
@@ -10,29 +10,21 @@ import {
   TableRow,
 } from "./ui/table"
 import ComboboxField from "./fields/combobox-field"
-import { useField } from "~/hooks/useField"
+import { useErrorField } from "~/hooks/useErrorField"
 import InputField from "./fields/input-field"
 import { Button } from "./ui/button"
 import { Plus, Trash2 } from "lucide-react"
 import type { SetStateAction } from "react"
-import FieldError from "./xui/field-error"
-import { useKeyedArray } from "~/hooks/useKeyedArray"
+import { groupToStr, setArrayItemField } from "~/lib/utils"
 
 type Props = Omit<ValuableProps<CreateTeacherHours[]>, "onBlur" | "onFocus"> & {
   groups: SchoolGroup[]
   onChange: (value: SetStateAction<CreateTeacherHours[]>) => void
-  error: ErrorField
 }
 
-export default function TeacherHoursField({
-  value,
-  onChange,
-  groups,
-  error,
-}: Props) {
-  const array = useKeyedArray(value, onChange)
-  const group = useField<SchoolGroup | null>(null)
-  const hours = useField<number | null>(null)
+export default function TeacherHoursField({ value, onChange, groups }: Props) {
+  const group = useErrorField<SchoolGroup | null>(null)
+  const hours = useErrorField<number | null>(null)
 
   const handleAdd = () => {
     if (!group.value) {
@@ -44,38 +36,46 @@ export default function TeacherHoursField({
       hours.setError("Укажите количество часов")
       return
     }
-
-    array.append({
-      groupId: group.value!.id,
-      hours: hours.value!,
-    })
+    onChange((prev) => [
+      ...prev,
+      {
+        groupId: group.value!.id,
+        hours: hours.value!,
+      },
+    ])
 
     group.reset()
     hours.reset()
   }
 
   return (
-    <FieldSet
-      className="gap-3 rounded-lg border bg-muted/20 p-4"
-      aria-invalid={!!error}
-    >
+    <FieldSet className="gap-3 rounded-lg border bg-muted/20 p-4">
       <FieldLegend className="text-sm font-semibold">
         Настройка часов
       </FieldLegend>
       <Table className="overflow-hidden [&_tr]:border-0">
         <TableHeader className="[&_tr]:border-0">
-          <TableRow>
-            <TableHead>
+          <TableRow className="hover:bg-transparent has-aria-expanded:bg-transparent data-[state=selected]:bg-transparent">
+            <TableHead className="py-2 align-top">
               <ComboboxField
                 items={groups}
                 value={group.value}
-                onChange={group.setValue}
+                onChange={(v) =>
+                  (!v || value.findIndex((s) => s.groupId === v.id) === -1) &&
+                  group.setValue(v)
+                }
                 error={group.error}
+                itemToKey={(item) => item.id}
+                itemToStringValue={(item) => groupToStr(item)}
+                filter={(item) =>
+                  value.findIndex((i) => i.groupId === item.id) === -1
+                }
                 placeholder="10Е"
+                label="Класс"
                 autoHighlight
               />
             </TableHead>
-            <TableHead>
+            <TableHead className="py-2 align-top">
               <InputField
                 min={1}
                 nullable
@@ -85,25 +85,35 @@ export default function TeacherHoursField({
                 label="Часы"
               />
             </TableHead>
-            <TableHead>
-              <Button className="mt-6" onClick={handleAdd}>
+            <TableHead className="w-px py-2 align-top whitespace-nowrap">
+              <Button className="mt-6.5" size="icon" onClick={handleAdd}>
                 <Plus />
               </Button>
             </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className="no-scrollbar max-h-[50vh] gap-2 overflow-x-hidden overflow-y-auto">
-          {array.items.map((item, index) => (
-            <TableRow key={item.key}>
+          {value.map((item, index) => (
+            <TableRow
+              key={item.groupId}
+              className="hover:bg-transparent has-aria-expanded:bg-transparent data-[state=selected]:bg-transparent"
+            >
               <TableCell>
                 <ComboboxField
                   items={groups}
-                  value={
-                    groups.find((g) => g.id === item.value.groupId) ?? null
+                  value={groups.find((g) => g.id === item.groupId) ?? null}
+                  filter={(item) =>
+                    value.findIndex((i) => i.groupId === item.id) === -1
                   }
                   onChange={(v) =>
-                    v && array.update(item.key, { groupId: v.id })
+                    v &&
+                    value.findIndex((s) => s.groupId === v.id) === -1 &&
+                    onChange((prev) =>
+                      setArrayItemField(prev, index, "groupId", v.id)
+                    )
                   }
+                  itemToKey={(item) => item.id}
+                  itemToStringValue={(item) => groupToStr(item)}
                   placeholder="10Е"
                   autoHighlight
                 />
@@ -111,16 +121,21 @@ export default function TeacherHoursField({
               <TableCell>
                 <InputField
                   min={1}
-                  value={item.value.hours}
-                  onChange={(v) => array.update(item.key, { hours: v })}
-                  label="Часы"
+                  value={item.hours}
+                  onChange={(v) =>
+                    onChange((prev) =>
+                      setArrayItemField(prev, index, "hours", v)
+                    )
+                  }
                 />
               </TableCell>
               <TableCell>
                 <Button
                   variant="destructive"
-                  size="icon-lg"
-                  onClick={() => array.remove(item.key)}
+                  size="icon"
+                  onClick={() =>
+                    onChange((prev) => prev.filter((_, idx) => index !== idx))
+                  }
                 >
                   <Trash2 />
                 </Button>
@@ -129,7 +144,6 @@ export default function TeacherHoursField({
           ))}
         </TableBody>
       </Table>
-      <FieldError error={error} />
     </FieldSet>
   )
 }

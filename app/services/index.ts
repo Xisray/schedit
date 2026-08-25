@@ -1,15 +1,18 @@
 import type { EntityTable, IDType, InsertType, UpdateSpec } from "dexie"
+import { DEFAULT_SCHEDULE_CONFIG } from "~/constants"
 import { db } from "~/db"
 import type {
   CreateDayConfig,
   CreateEntity,
   CreateTeacherHours,
-  DayConfig,
+  DayConfigExtended,
+  Id,
   PatchEntity,
   PrimaryKeyName,
+  Room,
   SchoolGroup,
+  SchoolGroupExtended,
   Teacher,
-  TeacherHours,
 } from "~/types"
 
 type ServiceBase<TEntity, TKey extends keyof TEntity> = {
@@ -43,12 +46,14 @@ type GroupService = ServiceBase<SchoolGroup, PrimaryKeyName> & {
   ) => Promise<void>
   get: (
     id: IDType<SchoolGroup, PrimaryKeyName>
-  ) => Promise<(SchoolGroup & { dayConfigs: DayConfig[] }) | undefined>
+  ) => Promise<SchoolGroupExtended | undefined>
   bulkAdd: (
     entities: CreateEntity<SchoolGroup>[],
     dayConfigs?: CreateDayConfig[]
   ) => Promise<void>
   getAll: () => Promise<SchoolGroup[]>
+  getAllExtended: () => Promise<SchoolGroupExtended[]>
+  bulkRemove: (ids: IDType<SchoolGroup, PrimaryKeyName>[]) => Promise<void>
 }
 
 type TeacherService = ServiceBase<Teacher, PrimaryKeyName> & {
@@ -96,10 +101,12 @@ function createService<TEntity, TKey extends keyof TEntity>(
 
 export const roomService = createService(db.rooms)
 export const groupService: GroupService = {
-  async add(group, dayConfigs = []) {
+  async add(group, dayConfigs) {
     await db.transaction("rw", [db.groups, db.dayConfigs], async () => {
       const groupId = await db.groups.add(group)
-
+      console.log(dayConfigs)
+      if (dayConfigs === undefined)
+        dayConfigs = DEFAULT_SCHEDULE_CONFIG[group.grade]
       if (dayConfigs.length > 0) {
         const dayConfigsWithForeignId = dayConfigs.map((h) => ({
           ...h,
@@ -137,32 +144,83 @@ export const groupService: GroupService = {
   async get(id) {
     const result = await db.groups.get(id)
     if (!result) return undefined
-
     const dayConfigs = await db.dayConfigs.where({ groupId: id }).toArray()
+
+    const roomIds = Array.from(
+      new Set(
+        dayConfigs.map((d) => d.roomId).filter((id): id is Id => Boolean(id))
+      )
+    )
+    const rooms =
+      roomIds.length > 0
+        ? await db.rooms.where("id").anyOf(roomIds).toArray()
+        : []
+
+    const roomMap = new Map<Id, Room>(rooms.map((r) => [r.id, r]))
 
     return {
       ...result,
-      dayConfigs,
+      dayConfigs: dayConfigs.map(({ groupId, roomId, ...dayCfg }) => ({
+        ...dayCfg,
+        room: roomId ? (roomMap.get(roomId) ?? null) : null,
+      })),
     }
   },
-  async bulkAdd(entities, dayConfigs = []) {
+  async bulkAdd(entities, dayConfigs) {
     await db.transaction("rw", [db.groups, db.dayConfigs], async () => {
       const groupIds = await db.groups.bulkAdd(entities, { allKeys: true })
 
-      if (dayConfigs.length > 0) {
-        const allDayConfigs = groupIds.flatMap((groupId) =>
-          dayConfigs.map((dc) => ({
-            ...dc,
-            groupId,
-          }))
-        )
+      const allDayConfigs = groupIds.flatMap((groupId, index) =>
+        (dayConfigs
+          ? dayConfigs
+          : DEFAULT_SCHEDULE_CONFIG[entities[index].grade]
+        ).map((dc) => ({
+          ...dc,
+          groupId,
+        }))
+      )
 
+      if (allDayConfigs.length > 0) {
         await db.dayConfigs.bulkAdd(allDayConfigs)
       }
     })
   },
   async getAll() {
     return await db.groups.toArray()
+  },
+  async getAllExtended() {
+    const [groups, dayConfigs, rooms] = await Promise.all([
+      db.groups.toArray(),
+      db.dayConfigs.toArray(),
+      db.rooms.toArray(),
+    ])
+    const roomMap = new Map<Id, Room>(rooms.map((r) => [r.id, r]))
+    const configsByGroup = new Map<Id, DayConfigExtended[]>()
+
+    for (const config of dayConfigs) {
+      const { groupId, roomId, ...restConfig } = config
+      const extendedConfig: DayConfigExtended = {
+        ...restConfig,
+        room: roomId ? (roomMap.get(roomId) ?? null) : null,
+      }
+
+      const list = configsByGroup.get(groupId)
+      if (list) {
+        list.push(extendedConfig)
+      } else {
+        configsByGroup.set(groupId, [extendedConfig])
+      }
+    }
+
+    return groups.map((group) => ({
+      ...group,
+      dayConfigs: (configsByGroup.get(group.id) ?? []).sort(
+        (a, b) => a.dayId - b.dayId
+      ),
+    }))
+  },
+  async bulkRemove(ids) {
+    await db.groups.bulkDelete(ids)
   },
 }
 export const teacherService: TeacherService = {

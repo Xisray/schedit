@@ -3,11 +3,10 @@ import { DoorClosed, Users } from "lucide-react"
 import RoomForm from "~/components/forms/RoomForm"
 import { Badge } from "~/components/ui/badge"
 import ItemsList from "~/components/view/ItemsList"
-import CardWrapper from "~/components/wraps/CardWrapper"
 import DialogWrapper from "~/components/wraps/DialogWrapper"
 import { useField } from "~/hooks/useField"
 import { roomService } from "~/services"
-import type { Id, Room } from "~/types"
+import type { Room } from "~/types"
 
 export default function Rooms() {
   const rooms = useLiveQuery(() => roomService.getAll(), [], [])
@@ -17,9 +16,6 @@ export default function Rooms() {
 
   return (
     <>
-      <CardWrapper title="Добавление кабинетов">
-        <RoomForm />
-      </CardWrapper>
       <ItemsList
         items={rooms}
         clear={roomService.clear}
@@ -27,6 +23,10 @@ export default function Rooms() {
         title={`Список кабинетов (${rooms.length})`}
         onEdit={(item) => {
           selected.setValue(item)
+          open.setValue(true)
+        }}
+        onAdd={() => {
+          selected.setValue(null)
           open.setValue(true)
         }}
         remove={(item) => roomService.remove(item.id)}

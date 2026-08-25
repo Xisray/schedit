@@ -1,9 +1,8 @@
-import { useLiveQuery } from "dexie-react-hooks"
 import { type SubmitEvent } from "react"
 import { useErrorField } from "~/hooks/useErrorField"
 import { groupToStr, parseGroupTemplate, resolveError } from "~/lib/utils"
 import { groupService } from "~/services"
-import type { CreateDayConfig, Id } from "~/types"
+import type { CreateDayConfig, SchoolGroupExtended } from "~/types"
 import { Field, FieldGroup } from "../ui/field"
 import InputField from "../fields/input-field"
 import CheckField from "../fields/check-field"
@@ -13,55 +12,62 @@ import { Edit2, Plus } from "lucide-react"
 import { useField } from "~/hooks/useField"
 
 type Props = {
-  groupId?: Id
+  group?: SchoolGroupExtended | null
+  onSubmit?: () => void
 }
 
-export default function GroupForm({ groupId }: Props) {
-  const selectedGroup = useLiveQuery(
-    () => groupId && groupService.get(groupId),
-    [groupId]
-  )
+export default function GroupForm({ group = null, onSubmit }: Props) {
+  const isCreating = !group
 
-  const isCreating = !selectedGroup
-
-  const group = useErrorField(selectedGroup ? groupToStr(selectedGroup) : "")
+  const groupName = useErrorField(group ? groupToStr(group) : "")
 
   const useDefaultDayConfig = useField(true)
 
   const dayConfigs = useField(
-    (selectedGroup?.dayConfigs as CreateDayConfig[]) ?? []
+    (group?.dayConfigs.map(({ room, ...d }) => ({
+      ...d,
+      roomId: room?.id ?? null,
+    })) as CreateDayConfig[]) ?? []
   )
 
   const showScheduleEditor = !isCreating || !useDefaultDayConfig.value
 
   const handleSubmit = async (e: SubmitEvent) => {
     e.preventDefault()
-    const groupTrimmed = group.value.trim()
+    const groupTrimmed = groupName.value.trim()
     const groups = parseGroupTemplate(groupTrimmed)
 
     if (groups.length === 0) {
-      group.setError("Укажите корректный класс")
+      groupName.setError("Укажите корректный класс")
       return
     }
     try {
       if (!isCreating) {
         if (groups.length > 1) {
-          group.setError(
+          groupName.setError(
             "При редактировании нельзя указывать несколько классов"
           )
           return
         }
-        groupService.patch(groupId!, groups[0], dayConfigs.value)
-        group.setError(null)
+        groupService.patch(group.id, groups[0], dayConfigs.value)
+        groupName.setError(null)
       } else {
         if (groups.length === 1)
-          await groupService.add(groups[0], dayConfigs.value)
-        else await groupService.bulkAdd(groups, dayConfigs.value)
-        group.reset()
+          await groupService.add(
+            groups[0],
+            useDefaultDayConfig.value ? undefined : dayConfigs.value
+          )
+        else
+          await groupService.bulkAdd(
+            groups,
+            useDefaultDayConfig.value ? undefined : dayConfigs.value
+          )
+        groupName.reset()
         dayConfigs.reset()
       }
+      onSubmit?.()
     } catch (e) {
-      group.setError(resolveError(e))
+      groupName.setError(resolveError(e))
     }
   }
 
@@ -69,9 +75,9 @@ export default function GroupForm({ groupId }: Props) {
     <form onSubmit={handleSubmit} className="@container grid gap-4 sm:gap-5">
       <FieldGroup>
         <InputField
-          value={group.value}
-          onChange={group.setValue}
-          error={group.error}
+          value={groupName.value}
+          onChange={groupName.setValue}
+          error={groupName.error}
           label="Класс(ы)"
           placeholder="Например: 10А"
           required
@@ -91,7 +97,7 @@ export default function GroupForm({ groupId }: Props) {
           />
         )}
         <Field className="w-fit self-center">
-          <Button type="submit" disabled={!!group.error}>
+          <Button type="submit" disabled={!!groupName.error}>
             {isCreating ? (
               <>
                 <Plus className="mr-1 h-4 w-4" />

@@ -1,6 +1,5 @@
-import { useLiveQuery } from "dexie-react-hooks"
 import { useState, type SubmitEvent } from "react"
-import type { Id, Room } from "~/types"
+import type { Room } from "~/types"
 import { Field, FieldGroup } from "../ui/field"
 import { cn, resolveError } from "~/lib/utils"
 import { useErrorField } from "~/hooks/useErrorField"
@@ -55,11 +54,6 @@ type Props = {
 }
 
 export default function RoomForm({ room = null, onSubmit }: Props) {
-  // const selectedRoom = useLiveQuery(
-  //   async () => roomId && (await roomService.get(roomId)),
-  //   [roomId]
-  // )
-
   const isCreating = !room
 
   const roomName = useErrorField(room?.name ?? "")

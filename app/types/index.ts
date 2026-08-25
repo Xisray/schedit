@@ -1,5 +1,3 @@
-import type { InsertType, UpdateSpec } from "dexie"
-
 export type Id = number & {
   readonly __brand: "Id"
 }
@@ -27,6 +25,14 @@ export interface DayConfig extends Entity {
   minLessons: number
   maxLessons: number
   roomId: Id | null
+}
+
+export interface DayConfigExtended extends Omit<DayConfig, "groupId" | "roomId"> {
+  room: Room | null
+}
+
+export interface SchoolGroupExtended extends SchoolGroup {
+  dayConfigs: DayConfigExtended[]
 }
 
 export interface Teacher extends Entity {

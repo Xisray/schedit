@@ -59,7 +59,7 @@ export default function DayConfigsField({
                 }
               />
               {dayConfig && (
-                <FieldGroup className="flex-col @sm:flex-row">
+                <FieldGroup className="flex-col @md:flex-row">
                   <InputField
                     value={dayConfig.firstLesson}
                     onChange={(v) =>
@@ -95,7 +95,7 @@ export default function DayConfigsField({
                     items={rooms}
                     itemToStringValue={(item) => item.name}
                     itemToKey={(item) => item.id}
-                    placeholder="Напр. 204"
+                    placeholder="204"
                     label="Кабинет"
                     autoHighlight
                   />

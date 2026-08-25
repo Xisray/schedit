@@ -5,7 +5,7 @@ import { Edit, Trash2 } from "lucide-react"
 
 type Props<T> = {
   title: string
-  emptyMessage: string
+  emptyMessage?: string
   items: T[]
   onEdit: (item: T) => void
   clear: () => void
@@ -16,7 +16,7 @@ type Props<T> = {
 
 export default function ItemsList<T>({
   title,
-  emptyMessage,
+  emptyMessage = "Нет элементов",
   items,
   onEdit,
   clear,

@@ -40,7 +40,7 @@ export default function Combobox<T>({
   filter,
   open,
   autoHighlight,
-  emptyMessage = "Нет результата",
+  emptyMessage = "Нет элементов",
   // inputClassName,
   sideOffset,
 

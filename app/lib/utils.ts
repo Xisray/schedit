@@ -53,15 +53,31 @@ export function setArrayItemField<T, K extends keyof T>(
   )
 }
 
+interface BulkErrorLike {
+  failures: unknown[]
+}
+
+function isBulkError(error: unknown): error is BulkErrorLike {
+  if (error instanceof Dexie.BulkError) {
+    return true
+  }
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "failures" in error &&
+    Array.isArray((error as Record<string, unknown>).failures)
+  )
+}
+
 export function resolveError(error: unknown): Error | string {
   if (!error) return ""
 
-  if (error instanceof Error && error.name === "Error") return error
-  else if (typeof error === "string") return error
-  else if (error instanceof Dexie.BulkError)
+  if (isBulkError(error))
     return error.failures[0]
       ? resolveError(error.failures[0])
       : "Не удалось сохранить часть записей"
+  else if (typeof error === "string") return error
+  else if (error instanceof Error && error.name === "Error") return error
   if (
     error instanceof Dexie.DexieError ||
     (error instanceof Error && error.name in ERROR_MESSAGES)

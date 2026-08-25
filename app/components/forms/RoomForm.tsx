@@ -1,6 +1,6 @@
 import { useLiveQuery } from "dexie-react-hooks"
 import { useState, type SubmitEvent } from "react"
-import type { Id } from "~/types"
+import type { Id, Room } from "~/types"
 import { Field, FieldGroup } from "../ui/field"
 import { cn, resolveError } from "~/lib/utils"
 import { useErrorField } from "~/hooks/useErrorField"
@@ -50,34 +50,36 @@ function parseRoomRanges(rooms: string): string[] {
 }
 
 type Props = {
-  roomId?: Id
+  room?: Room | null
+  onSubmit?: () => void
 }
 
-export default function RoomForm({ roomId }: Props) {
-  const selectedRoom = useLiveQuery(
-    async () => roomId && (await roomService.get(roomId)),
-    [roomId]
-  )
+export default function RoomForm({ room = null, onSubmit }: Props) {
+  // const selectedRoom = useLiveQuery(
+  //   async () => roomId && (await roomService.get(roomId)),
+  //   [roomId]
+  // )
 
-  const isCreating = !selectedRoom
+  const isCreating = !room
 
-  const room = useErrorField(selectedRoom?.name ?? "")
-  const [capacity, setCapacity] = useState(selectedRoom?.capacity ?? 1)
+  const roomName = useErrorField(room?.name ?? "")
+  const [capacity, setCapacity] = useState(room?.capacity ?? 1)
 
   const handleSubmit = async (e: SubmitEvent) => {
     e.preventDefault()
-    const roomTrimmed = room.value.trim()
+    const roomTrimmed = roomName.value.trim()
     try {
       if (!isCreating) {
-        await roomService.patch(roomId!, { name: roomTrimmed, capacity })
-        room.setError(null)
+        await roomService.patch(room.id, { name: roomTrimmed, capacity })
+        roomName.setError(null)
+        onSubmit?.()
         return
       }
 
       const rooms = parseRoomRanges(roomTrimmed)
 
       if (rooms.length === 0) {
-        room.setError("Укажите корректный номер кабинета")
+        roomName.setError("Укажите корректный номер кабинета")
         return
       }
       if (rooms.length === 1) {
@@ -93,10 +95,11 @@ export default function RoomForm({ roomId }: Props) {
           }))
         )
       }
-      room.reset()
+      roomName.reset()
       setCapacity(1)
+      onSubmit?.()
     } catch (e) {
-      room.setError(resolveError(e))
+      roomName.setError(resolveError(e))
     }
   }
 
@@ -105,9 +108,9 @@ export default function RoomForm({ roomId }: Props) {
       <FieldGroup className={cn("flex flex-col")}>
         <FieldGroup className="flex w-full flex-col @sm:flex-row">
           <InputField
-            value={room.value}
-            onChange={room.setValue}
-            error={room.error}
+            value={roomName.value}
+            onChange={roomName.setValue}
+            error={roomName.error}
             label="Кабинет"
             placeholder="например, 204-А"
             required
@@ -123,7 +126,7 @@ export default function RoomForm({ roomId }: Props) {
           />
         </FieldGroup>
         <Field className="w-fit self-center">
-          <Button type="submit" disabled={!!room.error}>
+          <Button type="submit" disabled={!!roomName.error}>
             {isCreating ? (
               <>
                 <Plus className="mr-1 h-4 w-4" />

@@ -3,7 +3,7 @@ import { type SubmitEvent } from "react"
 import { useErrorField } from "~/hooks/useErrorField"
 import { useField } from "~/hooks/useField"
 import { groupService, roomService, teacherService } from "~/services"
-import type { CreateEntity, Id, Teacher } from "~/types"
+import type { CreateEntity, Teacher, TeacherExtended } from "~/types"
 import { FieldGroup } from "../ui/field"
 import InputField from "../fields/input-field"
 import ComboboxField from "../fields/combobox-field"
@@ -14,22 +14,19 @@ import { Button } from "../ui/button"
 import { ValidationException } from "~/lib/errors"
 
 type Props = {
-  teacherId?: Id
+  teacher?: TeacherExtended | null
+  onSubmit?: () => void
 }
 
-export default function TeacherForm({ teacherId }: Props) {
-  const selectedTeacher = useLiveQuery(
-    () => teacherId && teacherService.get(teacherId),
-    [teacherId]
-  )
+export default function TeacherForm({ teacher = null, onSubmit }: Props) {
   const groups = useLiveQuery(() => groupService.getAll(), [], [])
   const rooms = useLiveQuery(() => roomService.getAll(), [], [])
-  const isCreating = !selectedTeacher
+  const isCreating = !teacher
 
-  const name = useErrorField(selectedTeacher?.name ?? "")
-  const group = useErrorField(selectedTeacher?.groupId ?? null)
-  const room = useField(selectedTeacher?.roomId ?? null)
-  const hours = useField(selectedTeacher?.hours ?? [])
+  const name = useErrorField(teacher?.name ?? "")
+  const group = useErrorField(teacher?.groupId ?? null)
+  const room = useField(teacher?.roomId ?? null)
+  const hours = useField(teacher?.hours ?? [])
 
   const handleSubmit = async (e: SubmitEvent) => {
     e.preventDefault()
@@ -41,11 +38,12 @@ export default function TeacherForm({ teacherId }: Props) {
     }
     try {
       if (isCreating) await teacherService.add(entity, hours.value)
-      else await teacherService.patch(teacherId!, entity, hours.value)
+      else await teacherService.patch(teacher.id, entity, hours.value)
       name.reset()
       group.reset()
       room.reset()
       hours.reset()
+      onSubmit?.()
     } catch (e) {
       if (e instanceof ValidationException) {
         if (e.errors.name) {

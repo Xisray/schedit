@@ -27,7 +27,10 @@ export interface DayConfig extends Entity {
   roomId: Id | null
 }
 
-export interface DayConfigExtended extends Omit<DayConfig, "groupId" | "roomId"> {
+export interface DayConfigExtended extends Omit<
+  DayConfig,
+  "groupId" | "roomId"
+> {
   room: Room | null
 }
 
@@ -45,6 +48,10 @@ export interface TeacherHours extends Entity {
   teacherId: Id
   groupId: Id
   hours: number
+}
+
+export interface TeacherExtended extends Teacher {
+  hours: CreateTeacherHours[]
 }
 
 export type CreateEntity<TEntity> = Omit<TEntity, PrimaryKeyName>

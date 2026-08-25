@@ -13,6 +13,7 @@ import type {
   SchoolGroup,
   SchoolGroupExtended,
   Teacher,
+  TeacherExtended,
 } from "~/types"
 
 type ServiceBase<TEntity, TKey extends keyof TEntity> = {
@@ -68,7 +69,8 @@ type TeacherService = ServiceBase<Teacher, PrimaryKeyName> & {
   ) => Promise<void>
   get: (
     id: IDType<Teacher, PrimaryKeyName>
-  ) => Promise<(Teacher & { hours: CreateTeacherHours[] }) | undefined>
+  ) => Promise<TeacherExtended | undefined>
+  getAllExtended: () => Promise<TeacherExtended[]>
 }
 
 function createService<TEntity, TKey extends keyof TEntity>(
@@ -272,5 +274,24 @@ export const teacherService: TeacherService = {
       ...result,
       hours,
     }
+  },
+  async getAllExtended() {
+    const [teachers, allHours] = await Promise.all([
+      db.teachers.toArray(),
+      db.hours.toArray(),
+    ])
+    const hoursByTeacherId = new Map<Id, CreateTeacherHours[]>()
+    for (const { id, teacherId, ...hour } of allHours) {
+      const list = hoursByTeacherId.get(teacherId) ?? []
+      list.push(hour)
+      hoursByTeacherId.set(teacherId, list)
+    }
+
+    const result = teachers.map((t) => ({
+      ...t,
+      hours: hoursByTeacherId.get(t.id) ?? [],
+    }))
+
+    return result
   },
 }

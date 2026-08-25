@@ -1,5 +1,5 @@
-import { createDayConfig, createDayConfigs } from "~/lib/utils"
-import type { CreateDayConfig, DayConfig } from "~/types"
+import { createDayConfigs } from "~/lib/utils"
+import type { CreateDayConfig } from "~/types"
 
 export const DAYS_NAMES = [
   {

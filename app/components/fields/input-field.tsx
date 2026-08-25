@@ -62,7 +62,11 @@ export default function InputField<
 
   ...props
 }: ConstraintsFor<T> & InputFieldProps<T, N>) {
-  const isNumberField = typeof value === "number"
+  const isNumberField =
+    typeof value === "number" ||
+    "min" in props ||
+    "max" in props ||
+    "step" in props
   type OutValue = N extends true ? Nullable<T> : T
   const type = isNumberField ? "number" : "text"
   const emptyValue = (
@@ -104,12 +108,12 @@ export default function InputField<
       <InputGroup>
         <InputGroupInput
           id={id}
-          type={type}
           aria-invalid={!!error}
           onChange={handleChange}
           value={value ?? ""}
           className={className}
           {...props}
+          type={type}
         />
         {showClear && hasValue && (
           <InputGroupAddon align="inline-end">

@@ -1,4 +1,5 @@
 import type { Dexie, EntityTable } from "dexie"
+import { ValidationException } from "~/lib/errors"
 import type { Id, PrimaryKeyName } from "~/types"
 
 export function addFieldCheckConstraint<T, K extends keyof T>(
@@ -9,14 +10,14 @@ export function addFieldCheckConstraint<T, K extends keyof T>(
 ) {
   table.hook("creating", (_, obj) => {
     if (!check(obj[key])) {
-      throw new Error(errorMessage)
+      throw new ValidationException({ [key]: errorMessage })
     }
   })
   table.hook("updating", (mod, _, obj) => {
     const patch = mod as Partial<T>
     const newValue = key in patch ? patch[key]! : obj[key]
     if (!check(newValue)) {
-      throw new Error(errorMessage)
+      throw new ValidationException({ [key]: errorMessage })
     }
   })
 }

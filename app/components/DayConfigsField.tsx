@@ -18,7 +18,7 @@ export default function DayConfigsField({
 }: Omit<ValuableProps<CreateDayConfig[]>, "onBlur" | "onFocus"> & {
   onChange: (value: SetStateAction<CreateDayConfig[]>) => void
 }) {
-  const rooms = useLiveQuery(() => roomService.getAll(), [], [])
+  const rooms = useLiveQuery(() => roomService.getAll(), [], [] as Room[])
   const handleToggleDay = (dayIndex: number, enabled: boolean) => {
     if (enabled)
       onChange((prev) => [...prev, createDayConfig(dayIndex, 1, 5, 6)])
@@ -45,7 +45,7 @@ export default function DayConfigsField({
         Расписание на неделю (6 дней)
       </FieldLegend>
 
-      <FieldGroup className="no-scrollbar max-h-[50vh] overflow-x-hidden overflow-y-auto">
+      <FieldGroup className="no-scrollbar max-h-[50vh] overflow-x-hidden overflow-y-auto px-2">
         {DAYS_NAMES.map((day, dayIndex) => {
           const dayConfig = value.find((dc) => dc.dayId === dayIndex)
           return (

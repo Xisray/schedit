@@ -1,5 +1,5 @@
 import { useLiveQuery } from "dexie-react-hooks"
-import { useState, type SubmitEvent } from "react"
+import { type SubmitEvent } from "react"
 import { useErrorField } from "~/hooks/useErrorField"
 import { groupToStr, parseGroupTemplate, resolveError } from "~/lib/utils"
 import { groupService } from "~/services"
@@ -34,7 +34,7 @@ export default function GroupForm({ groupId }: Props) {
 
   const showScheduleEditor = !isCreating || !useDefaultDayConfig.value
 
-  const handleSubmit = (e: SubmitEvent) => {
+  const handleSubmit = async (e: SubmitEvent) => {
     e.preventDefault()
     const groupTrimmed = group.value.trim()
     const groups = parseGroupTemplate(groupTrimmed)
@@ -54,7 +54,9 @@ export default function GroupForm({ groupId }: Props) {
         groupService.patch(groupId!, groups[0], dayConfigs.value)
         group.setError(null)
       } else {
-        groupService.bulkAdd(groups, dayConfigs.value)
+        if (groups.length === 1)
+          await groupService.add(groups[0], dayConfigs.value)
+        else await groupService.bulkAdd(groups, dayConfigs.value)
         group.reset()
         dayConfigs.reset()
       }

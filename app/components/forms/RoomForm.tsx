@@ -53,9 +53,9 @@ type Props = {
   roomId?: Id
 }
 
-export function RoomForm({ roomId }: Props) {
+export default function RoomForm({ roomId }: Props) {
   const selectedRoom = useLiveQuery(
-    async () => (roomId && await roomService.get(roomId)),
+    async () => roomId && (await roomService.get(roomId)),
     [roomId]
   )
 
@@ -80,13 +80,19 @@ export function RoomForm({ roomId }: Props) {
         room.setError("Укажите корректный номер кабинета")
         return
       }
-
-      await roomService.bulkAdd(
-        rooms.map((room) => ({
-          name: room,
+      if (rooms.length === 1) {
+        await roomService.add({
+          name: rooms[0],
           capacity,
-        }))
-      )
+        })
+      } else {
+        await roomService.bulkAdd(
+          rooms.map((room) => ({
+            name: room,
+            capacity,
+          }))
+        )
+      }
       room.reset()
       setCapacity(1)
     } catch (e) {

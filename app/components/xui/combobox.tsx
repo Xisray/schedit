@@ -58,6 +58,7 @@ export default function Combobox<T>({
     <ShadcnCombobox
       items={items}
       itemToStringValue={itemToStringValue}
+      itemToStringLabel={itemToStringValue}
       open={open}
       autoHighlight={autoHighlight}
       value={value}
@@ -94,7 +95,7 @@ export default function Combobox<T>({
           {(item) =>
             !filter || filter(item) ? (
               <ComboboxItem key={itemToKey?.(item) ?? item} value={item}>
-                {children?.(item) ?? item}
+                {children?.(item) ?? itemToStringValue?.(item) ?? item}
               </ComboboxItem>
             ) : null
           }

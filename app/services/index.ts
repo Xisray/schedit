@@ -48,6 +48,7 @@ type GroupService = ServiceBase<SchoolGroup, PrimaryKeyName> & {
     entities: CreateEntity<SchoolGroup>[],
     dayConfigs?: CreateDayConfig[]
   ) => Promise<void>
+  getAll: () => Promise<SchoolGroup[]>
 }
 
 type TeacherService = ServiceBase<Teacher, PrimaryKeyName> & {
@@ -60,6 +61,9 @@ type TeacherService = ServiceBase<Teacher, PrimaryKeyName> & {
     teacher: PatchEntity<Teacher>,
     hours?: CreateTeacherHours[]
   ) => Promise<void>
+  get: (
+    id: IDType<Teacher, PrimaryKeyName>
+  ) => Promise<(Teacher & { hours: CreateTeacherHours[] }) | undefined>
 }
 
 function createService<TEntity, TKey extends keyof TEntity>(
@@ -157,6 +161,9 @@ export const groupService: GroupService = {
       }
     })
   },
+  async getAll() {
+    return await db.groups.toArray()
+  },
 }
 export const teacherService: TeacherService = {
   async add(teacher, hours = []) {
@@ -196,5 +203,16 @@ export const teacherService: TeacherService = {
   },
   async clear() {
     await db.teachers.clear()
+  },
+  async get(id) {
+    const result = await db.teachers.get(id)
+    if (!result) return undefined
+
+    const hours = await db.hours.where({ teacherId: id }).toArray()
+
+    return {
+      ...result,
+      hours,
+    }
   },
 }
